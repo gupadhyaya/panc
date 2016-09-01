@@ -74,11 +74,14 @@ import com.sun.tools.javac.util.Log;
 import com.sun.tools.javac.util.Name;
 
 import org.paninij.analysis.ASTCFGBuilder;
+import org.paninij.analysis.AnalysisUtil;
+import org.paninij.analysis.BlockGraph;
 import org.paninij.consistency.ConsistencyUtil;
 import org.paninij.consistency.ConsistencyUtil.SEQ_CONST_ALG;
 import org.paninij.consistency.SeqConstCheckAlgorithm;
 import org.paninij.systemgraph.SystemGraph;
 import org.paninij.systemgraph.SystemGraphBuilder;
+import org.paninij.taskgraph.TaskGraphBuilder;
 import org.paninij.util.PaniniConstants;
 
 /***
@@ -446,10 +449,27 @@ public final class Attr extends CapsuleInternal {
 		}
 	}
 
+	Map<String, BlockGraph> blockGraphs = new HashMap<String, BlockGraph>();
 	public final void postVisitMethodDef(JCMethodDecl tree,
 			Env<AttrContext> env, Resolve rs) {
 		if (tree.body != null) {
 			tree.accept(new ASTCFGBuilder(make));
+			/*ClassSymbol encl = tree.sym.enclClass();
+			String tree_name = tree.sym.toString();
+			ClassSymbol cs = tree.sym.ownerCapsule();
+			if (cs != null && cs.tree != null) 
+			if ((encl != null && encl.capsule_info != null) &&
+					AnalysisUtil.activeThread(cs, tree_name) ||
+	        		AnalysisUtil.originalMethod(cs, tree, tree_name) ||
+	        		AnalysisUtil.activeRun(cs, tree.sym)) {
+				String methodSignature = getMethodSignature(tree.name.toString(), tree.params);
+				BlockGraph graph = new BlockGraph(tree, builder);
+				if (!blockGraphs.containsKey(methodSignature))
+					blockGraphs.put(methodSignature, graph);
+				else {
+					System.out.println();
+				}
+			}*/
 		}
 
 		MethodSymbol ms = tree.sym;
@@ -465,6 +485,31 @@ public final class Attr extends CapsuleInternal {
 				ms.attributes_field = ms.attributes_field.append(buf);
 			}
 		}
+	}
+
+	Map<String, Map<String, BlockGraph>> capsuleGraphs = new HashMap<String, Map<String, BlockGraph>>();
+	public final void postVisitCapsuleDef(final JCCapsuleDecl tree) {
+		String t = tree.name.toString();
+		if (!capsuleGraphs.containsKey(t) && blockGraphs.size() > 0) {
+			capsuleGraphs.put(t, blockGraphs);
+			blockGraphs = new HashMap<String, BlockGraph>();
+		} else {
+			System.out.println();
+		}
+	}
+	
+	private String getMethodSignature(String method, List<JCVariableDecl> params) {
+		StringBuilder sb = new StringBuilder();
+		sb.append(method);
+		sb.append("(");
+		for (JCVariableDecl jcVariableDecl : params) {
+			sb.append(jcVariableDecl.vartype);
+			sb.append(",");
+		}
+		if (sb.toString().contains(","))
+			sb.deleteCharAt(sb.length() - 1); // remove the last comma
+		sb.append(")");
+		return sb.toString();
 	}
 	
 	private final void addDelegationMethod(final JCCapsuleDecl tree, 
@@ -741,6 +786,8 @@ public final class Attr extends CapsuleInternal {
 			}
 		}
 		pchk.checkStateInit(tree.sym, env);
+		// invoking postvisit
+		postVisitCapsuleDef(tree);
 	}
 	
 	private ListBuffer<JCStatement> createCapsuleMemberDisconnects(
@@ -913,6 +960,8 @@ public final class Attr extends CapsuleInternal {
 			Env<AttrContext> env) {
 		systemGraphBuilder.completeEdges(tree.sysGraph, annotationProcessor,
 				env, rs);
+		// SystemGraphPrinter.print_console(tree.sysGraph);
+		//new TaskGraphBuilder(tree, tree.sysGraph, capsuleGraphs, names._this);
 
 		// Sequential consistency detection
 		SeqConstCheckAlgorithm sca = ConsistencyUtil.createChecker(seqConstAlg,
