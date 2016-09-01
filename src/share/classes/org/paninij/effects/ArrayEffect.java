@@ -37,6 +37,8 @@ public class ArrayEffect implements EffectEntry {
 	}
 
 	public int hashCode() {
+		if (path == null)
+			return 0;
 		return path.hashCode();
 	}
 

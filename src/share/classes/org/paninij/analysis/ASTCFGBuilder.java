@@ -25,7 +25,6 @@ import com.sun.tools.javac.code.Symbol;
 import com.sun.tools.javac.code.Symbol.*;
 import com.sun.tools.javac.tree.*;
 import com.sun.tools.javac.util.*;
-
 import com.sun.tools.javac.tree.JCTree.*;
 import com.sun.tools.javac.tree.TreeScanner;
 
@@ -33,9 +32,9 @@ import org.paninij.effects.EffectInter;
 
 public class ASTCFGBuilder extends TreeScanner {
 	private int id = 0;
-	private ArrayList<JCTree> currentStartNodes;
-	private ArrayList<JCTree> currentEndNodes;
-	private ArrayList<JCTree> currentExitNodes;
+	public ArrayList<JCTree> currentStartNodes;
+	public ArrayList<JCTree> currentEndNodes;
+	public ArrayList<JCTree> currentExitNodes;
 	private static ArrayList<JCTree> emptyList = new ArrayList<JCTree>(0);
 
 	private EffectInter effectsBuilder;
@@ -172,7 +171,8 @@ public class ASTCFGBuilder extends TreeScanner {
 		    ClassSymbol encl = tree_sym.enclClass();
 	        if ((encl != null && encl.capsule_info != null) &&
 	        		AnalysisUtil.activeThread(cs, tree_name) ||
-	        		AnalysisUtil.originalMethod(cs, tree, tree_name)) {
+	        		AnalysisUtil.originalMethod(cs, tree, tree_name) ||
+	        		AnalysisUtil.activeRun(cs, tree.sym)) {
 				ArrayList<JCTree> previous = order;
 				order = new ArrayList<JCTree>();
 
@@ -186,11 +186,11 @@ public class ASTCFGBuilder extends TreeScanner {
 				}
 				tree.cost = methodCost;
 
-				order = previous;
+				//order = previous;
 			}
 		}
 	}
-
+	
 	public void visitVarDef(JCVariableDecl tree) {
 		JCExpression init = tree.init;
 

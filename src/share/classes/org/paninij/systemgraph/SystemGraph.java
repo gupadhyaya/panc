@@ -99,6 +99,10 @@ public class SystemGraph {
 			string += "}";
 			return string;
 		}
+		
+		public String getQualifiedName() {
+			return name + ":" + capsule.name;
+		}
 	}
 //	public static class Connection{
 //		public Name name; //alias name of the capsule connected
@@ -213,9 +217,21 @@ public class SystemGraph {
 		}
 		s.append("Edges: \n");
 		for(Edge edge : edges){
+			if (edge.fromProcedure.toString().contains("$Original") ||
+					edge.toProcedure.toString().contains("$Original") ||
+					!isPublic(edge.fromProcedure, edge.toProcedure))
+				continue;
 			edge.toString(s);
 		}
 		return s.toString();
+	}
+	
+	private boolean isPublic(MethodSymbol fromProcedure, MethodSymbol toProcedure) {
+		if ((fromProcedure.flags_field & Flags.PUBLIC) != 0 &&
+				(toProcedure.flags_field & Flags.PUBLIC) != 0)
+				return true;
+		
+		return false;
 	}
 
 	public List<Edge> getEdges(Node head, MethodSymbol fromSym, List<Node> tail) {
