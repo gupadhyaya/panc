@@ -441,6 +441,30 @@ public class Enter extends JCTree.Visitor {
 						.<JCExpression> of(make.Ident(capsule.name)), tc
 						.copy(capsule.defs));
 				copyActive.accessMods = capsule.mods.flags;
+
+                // copy @Parallelism annotation
+                if (capsule.mods.annotations.size() > 0) {
+                    for (List<JCAnnotation> anons = capsule.mods.annotations; anons
+                            .nonEmpty(); anons = anons.tail) {
+                        JCAnnotation anon = anons.head;
+                        if (anon.annotationType instanceof JCIdent) {
+                            if (((JCIdent) anon.annotationType).name.toString()
+                                    .equalsIgnoreCase("Parallelism")) {
+                                // copyActive.mods.annotations.add(anon);
+                                // get the design block of the active capsule
+                                for (List<JCTree> copyDefs = copyActive.defs; copyDefs
+                                        .nonEmpty(); copyDefs = copyDefs.tail) {
+                                    JCTree copyActiveDef = copyDefs.head;
+                                    if (copyActiveDef instanceof JCDesignBlock) {
+                                        ((JCDesignBlock) copyActiveDef).mods.annotations = ((JCDesignBlock) copyActiveDef).mods.annotations
+                                                .append(anon);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                
 				JCCapsuleDecl copyCapsule = make
 						.CapsuleDef(
 								make.Modifiers(INTERFACE, annotationProcessor
